@@ -1,0 +1,111 @@
+# MAX44009 Register Definitions
+# Extracted from Analog Devices datasheet
+
+## Register Map (Table 1)
+
+| Addr | Register Name               | R/W | POR State | Bits                                      |
+|------|----------------------------|-----|-----------|-------------------------------------------|
+| 0x00 | Interrupt Status           | R   | 0x00      | [7:1]=reserved, [0]=INTS                  |
+| 0x01 | Interrupt Enable           | R/W | 0x00      | [7:1]=reserved, [0]=INTE                  |
+| 0x02 | Configuration              | R/W | 0x03      | [7]=CONT, [6]=MANUAL, [5:4]=reserved, [3]=CDR, [2:0]=TIM |
+| 0x03 | Lux High Byte              | R   | 0x00      | [7:4]=E[3:0], [3:0]=M[7:4]               |
+| 0x04 | Lux Low Byte               | R   | 0x00      | [7:4]=reserved, [3:0]=M[3:0]             |
+| 0x05 | Upper Threshold High Byte  | R/W | 0xFF      | [7:4]=UE[3:0], [3:0]=UM[7:4]             |
+| 0x06 | Lower Threshold High Byte  | R/W | 0x00      | [7:4]=LE[3:0], [3:0]=LM[7:4]             |
+| 0x07 | Threshold Timer            | R/W | 0xFF      | [7:0]=T[7:0]                              |
+
+## Bit Field Details
+
+### Register 0x00 - Interrupt Status (Read-only)
+- Bit 0: INTS
+  - 0 = No interrupt event
+  - 1 = Ambient light outside threshold window for longer than timer period
+  - Cleared by reading this register or writing 0 to INTE
+
+### Register 0x01 - Interrupt Enable
+- Bit 0: INTE
+  - 0 = INT pin and INTS bit not asserted
+  - 1 = Detection triggers hardware interrupt (INT pin low) and sets INTS
+
+### Register 0x02 - Configuration
+- Bit 7: CONT (Continuous mode)
+  - 0 = Default mode, measures every 800ms regardless of integration time
+  - 1 = Continuous mode, measures as fast as integration time allows
+  
+- Bit 6: MANUAL (Manual configuration mode)
+  - 0 = Automatic mode, CDR and TIM are read-only (auto-generated)
+  - 1 = Manual mode, CDR and TIM can be programmed
+  
+- Bit 3: CDR (Current Division Ratio)
+  - 0 = Current not divided (full photodiode current to ADC)
+  - 1 = Current divided by 8 (for high-brightness situations)
+  
+- Bits [2:0]: TIM (Integration Time)
+  | TIM | Time (ms) | Mode        |
+  |-----|-----------|-------------|
+  | 000 |   800     | Auto/Manual |
+  | 001 |   400     | Auto/Manual |
+  | 010 |   200     | Auto/Manual |
+  | 011 |   100     | Auto/Manual |
+  | 100 |    50     | Manual only |
+  | 101 |    25     | Manual only |
+  | 110 |  12.5     | Manual only |
+  | 111 |  6.25     | Manual only |
+
+### Register 0x03 - Lux High Byte (Read-only)
+- Bits [7:4]: E[3:0] - Exponent (0x0 to 0xE, 0xF = overrange)
+- Bits [3:0]: M[7:4] - Upper 4 bits of mantissa
+
+### Register 0x04 - Lux Low Byte (Read-only)
+- Bits [7:4]: Reserved
+- Bits [3:0]: M[3:0] - Lower 4 bits of mantissa
+
+### Register 0x05 - Upper Threshold High Byte
+- Bits [7:4]: UE[3:0] - Upper threshold exponent
+- Bits [3:0]: UM[7:4] - Upper threshold mantissa (upper 4 bits)
+
+### Register 0x06 - Lower Threshold High Byte
+- Bits [7:4]: LE[3:0] - Lower threshold exponent  
+- Bits [3:0]: LM[7:4] - Lower threshold mantissa (upper 4 bits)
+
+### Register 0x07 - Threshold Timer
+- Bits [7:0]: T[7:0] - Timer value
+- Time delay = T * 100ms (0x00 = immediate interrupt)
+
+## I2C Addresses
+
+| A0 Pin | Write Address | Read Address | 7-bit |
+|--------|--------------|--------------|-------|
+| GND    | 0x94         | 0x95         | 0x4A  |
+| VCC    | 0x96         | 0x97         | 0x4B  |
+
+## Lux Calculation
+
+Full resolution (using both registers):
+  Lux = 2^exponent × mantissa × 0.045
+  
+Where:
+  exponent = (reg_0x03 >> 4) & 0x0F
+  mantissa = ((reg_0x03 & 0x0F) << 4) | (reg_0x04 & 0x0F)
+
+Quick read (high byte only):
+  Lux = 2^exponent × mantissa × 0.72
+
+Where:
+  exponent = (reg_0x03 >> 4) & 0x0F
+  mantissa = reg_0x03 & 0x0F
+
+Threshold calculation:
+  threshold_lux = 2^exponent × (mantissa + 15) × 0.045
+
+## Important Notes
+
+1. When reading Lux High and Low bytes, use Repeated START (no STOP between reads)
+   to prevent register updates mid-read
+
+2. Exponent value of 0xF (15) indicates overrange condition
+
+3. In auto mode, integration time cycles through 100/200/400/800ms
+   CDR engages above ~700 lux
+
+4. Default POR state for config (0x03) sets TIM=011 (100ms), automatic mode
