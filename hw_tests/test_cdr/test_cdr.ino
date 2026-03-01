@@ -1,9 +1,11 @@
 /*!
  * @file test_cdr.ino
  *
- * Hardware test: Verify Current Division Ratio affects raw ADC output.
- * CDR=1 passes 1/8 of photodiode current to ADC, so raw registers change
- * even though the lux formula compensates.
+ * Hardware test: Verify Current Division Ratio affects raw ADC encoding.
+ * CDR=1 passes 1/8 of photodiode current to ADC. The chip compensates
+ * by shifting exponent/mantissa, so the encoded lux stays the same but
+ * the raw register values change. CDR=1 should show a higher exponent
+ * and/or lower mantissa than CDR=0 for the same light level.
  */
 
 #include <Adafruit_MAX44009.h>
@@ -13,8 +15,6 @@ Adafruit_MAX44009 max44009;
 
 int passed = 0;
 int failed = 0;
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -40,41 +40,58 @@ void setup() {
   Serial.println(F("\n--- CDR=0 (full current) ---"));
   max44009.setCurrentDivisionRatio(false);
   test(F("CDR set to false"), max44009.getCurrentDivisionRatio() == false);
-  delay(200);
+  delay(250);
   uint16_t rawFull = readRawLux();
   float luxFull = max44009.readLux();
+  uint8_t expFull = (rawFull >> 12) & 0x0F;
+  uint8_t mantFull = ((rawFull >> 4) & 0xF0) | (rawFull & 0x0F);
   Serial.print(F("Raw: 0x"));
   Serial.print(rawFull, HEX);
+  Serial.print(F("  exp="));
+  Serial.print(expFull);
+  Serial.print(F(" mant="));
+  Serial.print(mantFull);
   Serial.print(F("  Lux: "));
   Serial.println(luxFull);
-  test(F("Got valid reading"), !isnan(luxFull) && luxFull > 0);
+  test(F("Valid reading"), !isnan(luxFull) && luxFull > 0);
 
   // --- Read with divided current (CDR=1) ---
   Serial.println(F("\n--- CDR=1 (1/8 current) ---"));
   max44009.setCurrentDivisionRatio(true);
   test(F("CDR set to true"), max44009.getCurrentDivisionRatio() == true);
-  delay(200);
+  delay(250);
   uint16_t rawDiv = readRawLux();
   float luxDiv = max44009.readLux();
+  uint8_t expDiv = (rawDiv >> 12) & 0x0F;
+  uint8_t mantDiv = ((rawDiv >> 4) & 0xF0) | (rawDiv & 0x0F);
   Serial.print(F("Raw: 0x"));
   Serial.print(rawDiv, HEX);
+  Serial.print(F("  exp="));
+  Serial.print(expDiv);
+  Serial.print(F(" mant="));
+  Serial.print(mantDiv);
   Serial.print(F("  Lux: "));
   Serial.println(luxDiv);
-  test(F("Got valid reading"), !isnan(luxDiv) && luxDiv > 0);
+  test(F("Valid reading"), !isnan(luxDiv) && luxDiv > 0);
 
-  // --- Key test: raw registers MUST differ ---
-  // The lux formula compensates, so final lux may be similar,
-  // but raw ADC values must change when CDR is toggled.
+  // --- Verify CDR changes the encoding ---
   Serial.println(F("\n--- Hardware verification ---"));
-  Serial.print(F("Raw full: 0x"));
-  Serial.print(rawFull, HEX);
-  Serial.print(F("  Raw div: 0x"));
-  Serial.println(rawDiv, HEX);
-  test(F("Raw registers differ (CDR affects ADC)"), rawFull != rawDiv);
 
-  // Both lux values should be reasonable (sensor works in both modes)
-  test(F("Full current lux reasonable"), luxFull > 1.0 && luxFull < 100000.0);
-  test(F("Divided lux reasonable"), luxDiv > 1.0 && luxDiv < 100000.0);
+  // Raw registers must differ
+  test(F("Raw registers differ"), rawFull != rawDiv);
+
+  // CDR=1 reduces photodiode current, so the chip compensates:
+  // higher exponent and/or lower mantissa
+  test(F("CDR=1 exponent >= CDR=0"), expDiv >= expFull);
+  test(F("CDR=1 mantissa <= CDR=0"), mantDiv <= mantFull);
+
+  // Both should still read the same lux (chip compensates)
+  float luxDiff = luxFull - luxDiv;
+  if (luxDiff < 0)
+    luxDiff = -luxDiff;
+  Serial.print(F("Lux difference: "));
+  Serial.println(luxDiff);
+  test(F("Lux values match (chip compensates)"), luxDiff < 1.0);
 
   // Restore default
   max44009.setCurrentDivisionRatio(false);
