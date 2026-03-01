@@ -31,6 +31,10 @@ void setup() {
   Serial.println(F("\n--- Mode Configuration ---"));
 
   max44009.setMode(MAX44009_MODE_CONTINUOUS);
+  // Options: MAX44009_MODE_DEFAULT (auto, 800ms cycle, lowest power)
+  //          MAX44009_MODE_CONTINUOUS (auto, fast updates)
+  //          MAX44009_MODE_MANUAL (manual gain/time, 800ms cycle)
+  //          MAX44009_MODE_MANUAL_CONTINUOUS (manual gain/time, fast updates)
   Serial.print(F("Mode: "));
   switch (max44009.getMode()) {
   case MAX44009_MODE_DEFAULT:
@@ -48,11 +52,19 @@ void setup() {
   }
 
   // === Integration Time ===
-  // Switch to manual mode to set integration time, then back to continuous
   Serial.println(F("\n--- Integration Time ---"));
 
+  // Must be in a MANUAL mode to set integration time
   max44009.setMode(MAX44009_MODE_MANUAL_CONTINUOUS);
   max44009.setIntegrationTime(MAX44009_INTEGRATION_100MS);
+  // Options: MAX44009_INTEGRATION_800MS  (best low-light sensitivity)
+  //          MAX44009_INTEGRATION_400MS
+  //          MAX44009_INTEGRATION_200MS
+  //          MAX44009_INTEGRATION_100MS  (default, best high-brightness)
+  //          MAX44009_INTEGRATION_50MS   (manual mode only)
+  //          MAX44009_INTEGRATION_25MS   (manual mode only)
+  //          MAX44009_INTEGRATION_12_5MS (manual mode only)
+  //          MAX44009_INTEGRATION_6_25MS (manual mode only)
   Serial.print(F("Integration Time: "));
   switch (max44009.getIntegrationTime()) {
   case MAX44009_INTEGRATION_800MS:
@@ -84,33 +96,42 @@ void setup() {
   // === Current Division Ratio ===
   Serial.println(F("\n--- Current Division Ratio ---"));
 
-  max44009.setCurrentDivisionRatio(false); // false = full current
+  max44009.setCurrentDivisionRatio(false);
+  // false = full photodiode current to ADC (normal)
+  // true  = 1/8 current to ADC (for very bright environments)
   Serial.print(F("CDR: "));
   Serial.println(max44009.getCurrentDivisionRatio() ? F("1/8 (divided)")
                                                     : F("Full current"));
 
-  // === Switch back to auto continuous mode ===
+  // === Switch back to auto continuous mode for readings ===
   max44009.setMode(MAX44009_MODE_CONTINUOUS);
 
   // === Interrupt Configuration ===
   Serial.println(F("\n--- Interrupt Configuration ---"));
 
   max44009.setUpperThreshold(10000.0);
+  // Range: 0.045 to 188,000 lux (quantized to exponent/mantissa encoding)
   Serial.print(F("Upper Threshold: "));
   Serial.print(max44009.getUpperThreshold());
   Serial.println(F(" lux"));
 
   max44009.setLowerThreshold(1.0);
+  // Range: 0.045 to 188,000 lux
   Serial.print(F("Lower Threshold: "));
   Serial.print(max44009.getLowerThreshold());
   Serial.println(F(" lux"));
 
-  max44009.setThresholdTimer(10); // 10 * 100ms = 1 second
+  max44009.setThresholdTimer(10);
+  // Timer value * 100ms = delay before interrupt fires
+  // 0 = immediate, 255 = 25.5 seconds (default)
   Serial.print(F("Threshold Timer: "));
   Serial.print(max44009.getThresholdTimer());
   Serial.println(F(" (x100ms)"));
 
   max44009.enableInterrupt(false);
+  // true = INT pin asserts low when lux outside threshold window
+  // Note: INT pin is open-drain, needs external pull-up
+  // Note: reading getInterruptStatus() clears the interrupt
   Serial.print(F("Interrupt: "));
   Serial.println(max44009.isInterruptEnabled() ? F("Enabled") : F("Disabled"));
 
