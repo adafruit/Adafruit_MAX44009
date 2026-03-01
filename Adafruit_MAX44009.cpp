@@ -61,8 +61,7 @@ bool Adafruit_MAX44009::begin(uint8_t addr, TwoWire* wire) {
     return false;
   }
 
-  // Verify communication by reading CONFIG register
-  // Default value should be 0x03 (TIM=011, CDR=0, MANUAL=0, CONT=0)
+  // Verify communication by reading a register
   Adafruit_BusIO_Register config_reg =
       Adafruit_BusIO_Register(_i2c_dev, MAX44009_REG_CONFIG, 1);
   uint8_t config_val;
