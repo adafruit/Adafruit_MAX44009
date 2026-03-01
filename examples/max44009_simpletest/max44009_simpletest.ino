@@ -26,8 +26,8 @@ void setup() {
 void loop() {
   float lux = max44009.readLux();
 
-  Serial.print(F("Lux:"));
   if (!isnan(lux)) {
+    Serial.print(F("Lux:"));
     Serial.println(lux);
   }
 
