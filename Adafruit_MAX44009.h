@@ -118,7 +118,6 @@ class Adafruit_MAX44009 {
   Adafruit_I2CDevice* _i2c_dev; /**< I2C device object */
   bool _overrange;              /**< Last read was overrange */
 
-  float _luxFromRegisters(uint8_t high, uint8_t low);
   uint8_t _luxToThreshold(float lux);
   float _thresholdToLux(uint8_t threshold);
 };

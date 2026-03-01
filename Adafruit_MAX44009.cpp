@@ -91,7 +91,21 @@ float Adafruit_MAX44009::readLux() {
     return NAN;
   }
 
-  return _luxFromRegisters(buffer[0], buffer[1]);
+  uint8_t exponent = (buffer[0] >> 4) & 0x0F;
+
+  // Check for overrange (exponent 0xF)
+  if (exponent == 0x0F) {
+    _overrange = true;
+    return NAN;
+  }
+
+  _overrange = false;
+
+  // Full 8-bit mantissa: upper 4 bits from LUX_HIGH, lower 4 from LUX_LOW
+  uint8_t mantissa = ((buffer[0] & 0x0F) << 4) | (buffer[1] & 0x0F);
+
+  // Lux = 2^exponent * mantissa * 0.045
+  return (float)(1 << exponent) * (float)mantissa * MAX44009_LUX_MULTIPLIER;
 }
 
 /**
@@ -295,30 +309,6 @@ uint8_t Adafruit_MAX44009::getThresholdTimer() {
   uint8_t val;
   timer_reg.read(&val);
   return val;
-}
-
-/**
- * @brief Convert raw register values to lux
- * @param high High byte (LUX_HIGH register)
- * @param low Low byte (LUX_LOW register)
- * @return Lux value, or NAN if overrange
- */
-float Adafruit_MAX44009::_luxFromRegisters(uint8_t high, uint8_t low) {
-  uint8_t exponent = (high >> 4) & 0x0F;
-
-  // Check for overrange (exponent 0xF)
-  if (exponent == 0x0F) {
-    _overrange = true;
-    return NAN;
-  }
-
-  _overrange = false;
-
-  // Full 8-bit mantissa: upper 4 bits from LUX_HIGH, lower 4 from LUX_LOW
-  uint8_t mantissa = ((high & 0x0F) << 4) | (low & 0x0F);
-
-  // Lux = 2^exponent * mantissa * 0.045
-  return (float)(1 << exponent) * (float)mantissa * MAX44009_LUX_MULTIPLIER;
 }
 
 /**
