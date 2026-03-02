@@ -111,26 +111,26 @@ void setup() {
   // === Interrupt Configuration ===
   Serial.println(F("\n--- Interrupt Configuration ---"));
 
-  max44009.setUpperThreshold(10000.0);
+  max44009.setUpperThreshold(1000.0);
   // Range: 0.045 to 188,000 lux (quantized to exponent/mantissa encoding)
   Serial.print(F("Upper Threshold: "));
   Serial.print(max44009.getUpperThreshold());
   Serial.println(F(" lux"));
 
-  max44009.setLowerThreshold(1.0);
+  max44009.setLowerThreshold(100.0);
   // Range: 0.045 to 188,000 lux
   Serial.print(F("Lower Threshold: "));
   Serial.print(max44009.getLowerThreshold());
   Serial.println(F(" lux"));
 
-  max44009.setThresholdTimer(10);
+  max44009.setThresholdTimer(0);
   // Timer value * 100ms = delay before interrupt fires
   // 0 = immediate, 255 = 25.5 seconds (default)
   Serial.print(F("Threshold Timer: "));
   Serial.print(max44009.getThresholdTimer());
   Serial.println(F(" (x100ms)"));
 
-  max44009.enableInterrupt(false);
+  max44009.enableInterrupt(true);
   // true = INT pin asserts low when lux outside threshold window
   // Note: INT pin is open-drain, needs external pull-up
   // Note: reading getInterruptStatus() clears the interrupt
@@ -151,6 +151,12 @@ void loop() {
     Serial.println(F("OVERRANGE"));
   } else {
     Serial.println(lux);
+  }
+
+  // Check register status (note: reading this clears the interrupt!)
+  bool regStatus = max44009.getInterruptStatus();
+  if (regStatus) {
+    Serial.println(F("IRQ Fired"));
   }
 
   delay(100);
