@@ -37,74 +37,78 @@ void setup() {
   //          MAX44009_MODE_MANUAL_CONTINUOUS (manual gain/time, fast updates)
   Serial.print(F("Mode: "));
   switch (max44009.getMode()) {
-  case MAX44009_MODE_DEFAULT:
-    Serial.println(F("Default (auto, 800ms cycle)"));
-    break;
-  case MAX44009_MODE_CONTINUOUS:
-    Serial.println(F("Continuous (auto, fast updates)"));
-    break;
-  case MAX44009_MODE_MANUAL:
-    Serial.println(F("Manual (800ms cycle)"));
-    break;
-  case MAX44009_MODE_MANUAL_CONTINUOUS:
-    Serial.println(F("Manual Continuous (fast updates)"));
-    break;
+    case MAX44009_MODE_DEFAULT:
+      Serial.println(F("Default (auto, 800ms cycle)"));
+      break;
+    case MAX44009_MODE_CONTINUOUS:
+      Serial.println(F("Continuous (auto, fast updates)"));
+      break;
+    case MAX44009_MODE_MANUAL:
+      Serial.println(F("Manual (800ms cycle)"));
+      break;
+    case MAX44009_MODE_MANUAL_CONTINUOUS:
+      Serial.println(F("Manual Continuous (fast updates)"));
+      break;
   }
 
   // === Integration Time ===
-  Serial.println(F("\n--- Integration Time ---"));
+  // Only configurable in MANUAL modes; skip if using auto-ranging
+  if (max44009.getMode() == MAX44009_MODE_MANUAL ||
+      max44009.getMode() == MAX44009_MODE_MANUAL_CONTINUOUS) {
+    Serial.println(F("\n--- Integration Time ---"));
 
-  // Must be in a MANUAL mode to set integration time
-  max44009.setMode(MAX44009_MODE_MANUAL_CONTINUOUS);
-  max44009.setIntegrationTime(MAX44009_INTEGRATION_100MS);
-  // Options: MAX44009_INTEGRATION_800MS  (best low-light sensitivity)
-  //          MAX44009_INTEGRATION_400MS
-  //          MAX44009_INTEGRATION_200MS
-  //          MAX44009_INTEGRATION_100MS  (default, best high-brightness)
-  //          MAX44009_INTEGRATION_50MS   (manual mode only)
-  //          MAX44009_INTEGRATION_25MS   (manual mode only)
-  //          MAX44009_INTEGRATION_12_5MS (manual mode only)
-  //          MAX44009_INTEGRATION_6_25MS (manual mode only)
-  Serial.print(F("Integration Time: "));
-  switch (max44009.getIntegrationTime()) {
-  case MAX44009_INTEGRATION_800MS:
-    Serial.println(F("800ms"));
-    break;
-  case MAX44009_INTEGRATION_400MS:
-    Serial.println(F("400ms"));
-    break;
-  case MAX44009_INTEGRATION_200MS:
-    Serial.println(F("200ms"));
-    break;
-  case MAX44009_INTEGRATION_100MS:
-    Serial.println(F("100ms"));
-    break;
-  case MAX44009_INTEGRATION_50MS:
-    Serial.println(F("50ms"));
-    break;
-  case MAX44009_INTEGRATION_25MS:
-    Serial.println(F("25ms"));
-    break;
-  case MAX44009_INTEGRATION_12_5MS:
-    Serial.println(F("12.5ms"));
-    break;
-  case MAX44009_INTEGRATION_6_25MS:
-    Serial.println(F("6.25ms"));
-    break;
+    max44009.setIntegrationTime(MAX44009_INTEGRATION_100MS);
+    // Options: MAX44009_INTEGRATION_800MS  (best low-light sensitivity)
+    //          MAX44009_INTEGRATION_400MS
+    //          MAX44009_INTEGRATION_200MS
+    //          MAX44009_INTEGRATION_100MS  (default, best high-brightness)
+    //          MAX44009_INTEGRATION_50MS   (manual mode only)
+    //          MAX44009_INTEGRATION_25MS   (manual mode only)
+    //          MAX44009_INTEGRATION_12_5MS (manual mode only)
+    //          MAX44009_INTEGRATION_6_25MS (manual mode only)
+    Serial.print(F("Integration Time: "));
+    switch (max44009.getIntegrationTime()) {
+      case MAX44009_INTEGRATION_800MS:
+        Serial.println(F("800ms"));
+        break;
+      case MAX44009_INTEGRATION_400MS:
+        Serial.println(F("400ms"));
+        break;
+      case MAX44009_INTEGRATION_200MS:
+        Serial.println(F("200ms"));
+        break;
+      case MAX44009_INTEGRATION_100MS:
+        Serial.println(F("100ms"));
+        break;
+      case MAX44009_INTEGRATION_50MS:
+        Serial.println(F("50ms"));
+        break;
+      case MAX44009_INTEGRATION_25MS:
+        Serial.println(F("25ms"));
+        break;
+      case MAX44009_INTEGRATION_12_5MS:
+        Serial.println(F("12.5ms"));
+        break;
+      case MAX44009_INTEGRATION_6_25MS:
+        Serial.println(F("6.25ms"));
+        break;
+    }
+
+    // === Current Division Ratio ===
+    Serial.println(F("\n--- Current Division Ratio ---"));
+
+    max44009.setCurrentDivisionRatio(false);
+    // false = full photodiode current to ADC (normal)
+    // true  = 1/8 current to ADC (for very bright environments)
+    Serial.print(F("CDR: "));
+    Serial.println(max44009.getCurrentDivisionRatio() ? F("1/8 (divided)")
+                                                      : F("Full current"));
+
+    // Switch back to auto continuous mode for readings
+    max44009.setMode(MAX44009_MODE_CONTINUOUS);
+  } else {
+    Serial.println(F("\n(Integration time and CDR are auto-managed)"));
   }
-
-  // === Current Division Ratio ===
-  Serial.println(F("\n--- Current Division Ratio ---"));
-
-  max44009.setCurrentDivisionRatio(false);
-  // false = full photodiode current to ADC (normal)
-  // true  = 1/8 current to ADC (for very bright environments)
-  Serial.print(F("CDR: "));
-  Serial.println(max44009.getCurrentDivisionRatio() ? F("1/8 (divided)")
-                                                    : F("Full current"));
-
-  // === Switch back to auto continuous mode for readings ===
-  max44009.setMode(MAX44009_MODE_CONTINUOUS);
 
   // === Interrupt Configuration ===
   Serial.println(F("\n--- Interrupt Configuration ---"));
