@@ -69,6 +69,9 @@ bool Adafruit_MAX44009::begin(uint8_t addr, TwoWire* wire) {
     return false;
   }
 
+  // Default to continuous auto-ranging mode (fastest updates)
+  setMode(MAX44009_MODE_CONTINUOUS);
+
   return true;
 }
 
